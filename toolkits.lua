@@ -28,6 +28,213 @@ module.duplicateType = {
 	Event = "Event",
 	Condition = "Condition"
 }
+module.CommandFsm= {
+	None = 0,
+	AtkA = 1,
+	AtkX = 2,
+	AtkXorA = 3,
+	AtkXA = 4,
+	AtkAR1 = 5,
+	AtkXR1 = 6,
+	AtkXAR1 = 7,
+	AtkR1 = 8,
+	AtkR2 = 9,
+	AtkR2On = 10,
+	AtkR2Off = 11,
+	AtkR1Release = 12,
+	AtkR2Release = 13,
+	AtkAOn = 14,
+	AtkXOn = 15,
+	AtkXAOn = 16,
+	AtkAOff = 17,
+	AtkXOff = 18,
+	AtkARelease = 19,
+	AtkXRelease = 20,
+	WpStart = 21,
+	WpStartXAR = 22,
+	WpEnd = 23,
+	Escape = 24,
+	EscapeR = 25,
+	EscapeL = 26,
+	EscapeF = 27,
+	EscapeB = 28,
+	EscapeAnalogl = 29,
+	Dash = 30,
+	Guard = 31,
+	Sit = 32,
+	Ride = 33,
+	Tsuta = 34,
+	TsutaEnd = 35,
+	TsutaDash = 36,
+	WireUp = 37,
+	WireFront = 38,
+	WireTarget = 39,
+	WireStopEnd = 40,
+	WireEscape = 41,
+	WireUpGunner = 42,
+	WireFrontGunner = 43,
+	PopAction = 44,
+	GimmickPopAction = 45,
+	GimmickCancel = 46,
+	NpcFacilityPopAction = 47,
+	LongJump = 48,
+	EnvCreaturePopAction = 49,
+	ItemPopAction = 50,
+	AtkR1Delay = 51,
+	AtkAwithoutR1 = 52,
+	AtkXwithoutR1 = 53,
+	AtkXAwithoutR1 = 54,
+	AtkAwithoutX = 55,
+	AtkXwithoutA = 56,
+	AtkAwithoutXandR1 = 57,
+	AtkXwithoutAandR1 = 58,
+	AtkAxislRightX = 59,
+	AtkAxislLeftX = 60,
+	AtkAxislFrontX = 61,
+	AtkAxislBackX = 62,
+	AtkAxislFrontOrNeutralX = 63,
+	AtkAxislLRF3WayRightX = 64,
+	AtkAxislLRF3WayLeftX = 65,
+	AtkAxislLRF3WayFrontX = 66,
+	AtkAxislLRB3WayRightX = 67,
+	AtkAxislLRB3WayLeftX = 68,
+	AtkAxislLRB3WayBackX = 69,
+	AtkAxislFB2WayFrontX = 70,
+	AtkAxislFB2WayBackX = 71,
+	AtkAxislLR2WayRightX = 72,
+	AtkAxislLR2WayLeftX = 73,
+	AtkAnaloglUpX = 74,
+	AtkAnaloglDownX = 75,
+	AtkAnaloglLeftX = 76,
+	AtkAnaloglRightX = 77,
+	AtkAxislRightA = 78,
+	AtkAxislLeftA = 79,
+	AtkAxislFrontA = 80,
+	AtkAxislBackA = 81,
+	AtkAxislLRF3WayRightA = 82,
+	AtkAxislLRF3WayLeftA = 83,
+	AtkAxislLRF3WayFrontA = 84,
+	AtkAxislLRB3WayRightA = 85,
+	AtkAxislLRB3WayLeftA = 86,
+	AtkAxislLRB3WayBackA = 87,
+	AtkAxislFB2WayFrontA = 88,
+	AtkAxislFB2WayFrontOrNeutralA = 89,
+	AtkAxislFB2WayBackA = 90,
+	AtkAxislLR2WayRightA = 91,
+	AtkAxislLR2WayLeftA = 92,
+	AtkAnaloglUpA = 93,
+	AtkAnaloglDownA = 94,
+	AtkAnaloglLeftA = 95,
+	AtkAnaloglRightA = 96,
+	AtkAxislRightXA = 97,
+	AtkAxislLeftXA = 98,
+	AtkAxislFrontXA = 99,
+	AtkAxislBackXA = 100,
+	AtkAxislLRF3WayRightXA = 101,
+	AtkAxislLRF3WayLeftXA = 102,
+	AtkAxislLRF3WayFrontXA = 103,
+	AtkAxislLRB3WayRightXA = 104,
+	AtkAxislLRB3WayLeftXA = 105,
+	AtkAxislLRB3WayBackXA = 106,
+	AtkAxislFB2WayFrontXA = 107,
+	AtkAxislFB2WayBackXA = 108,
+	AtkAxislLR2WayRightXA = 109,
+	AtkAxislLR2WayLeftXA = 110,
+	AtkAnaloglUpXA = 111,
+	AtkAnaloglDownXA = 112,
+	AtkAnaloglLeftXA = 113,
+	AtkAnaloglRightXA = 114,
+	AtkAxislRightR1 = 115,
+	AtkAxislLeftR1 = 116,
+	AtkAxislFrontR1 = 117,
+	AtkAxislBackR1 = 118,
+	AtkAxislLRF3WayRightR1 = 119,
+	AtkAxislLRF3WayLeftR1 = 120,
+	AtkAxislLRF3WayFrontR1 = 121,
+	AtkAxislLRB3WayRightR1 = 122,
+	AtkAxislLRB3WayLeftR1 = 123,
+	AtkAxislLRB3WayBackR1 = 124,
+	AtkAxislFB2WayFrontR1 = 125,
+	AtkAxislFB2WayBackR1 = 126,
+	AtkAxislLR2WayRightR1 = 127,
+	AtkAxislLR2WayLeftR1 = 128,
+	AtkAnaloglUpR1 = 129,
+	AtkAnaloglDownR1 = 130,
+	AtkAnaloglLeftR1 = 131,
+	AtkAnaloglRightR1 = 132,
+	AtkAxislRightXR1 = 133,
+	AtkAxislLeftXR1 = 134,
+	AtkAxislFrontXR1 = 135,
+	AtkAxislBackXR1 = 136,
+	AtkAnaloglXA = 137,
+	AtkAnaloglA = 138,
+	AtkAnaloglX = 139,
+	AtkAnaloglR1 = 140,
+	AtkNeutralXA = 141,
+	AtkNeutralA = 142,
+	AtkNeutralX = 143,
+	AtkNeutralR1 = 144,
+	ItemY = 145,
+	ItemYOn = 146,
+	ItemYOff = 147,
+	KunaiAimZLOn = 148,
+	RideDriftOn = 149,
+	RideDriftOff = 150,
+	RideJump = 151,
+	SlidingJump = 152,
+	Marionette = 153,
+	OtomoPopAction = 154,
+	AtkRB = 155,
+	HagitoriPopAction = 156,
+	TrapRemovePopAction = 157,
+	LongJumpPointRelease = 158,
+	Fishing = 159,
+	DropEnvCreature = 160,
+	AnyTrigger = 161,
+	OtomoCommunicationStart = 162,
+	OtomoCommunicationA = 163,
+	OtomoCommunicationB = 164,
+	OtomoCommunicationX = 165,
+	OtomoCommunicationY = 166,
+	AtkR1ZR = 167,
+	AtkR1Off = 168,
+	LobbyWireUp = 169,
+	LobbyWireFront = 170,
+	LobbyWireTarget = 171,
+	Decide = 172,
+	Cancel = 173,
+	AtkR1On = 174,
+	Gimmick_Hold = 175,
+	Gimmick_HoldCancel = 176,
+	ActionStart = 177,
+	ActionEnd = 178,
+	ItemTake = 179,
+	AtkXAR1_ZR = 180,
+	AtkXAorR1 = 181,
+	GimmickShotTrg_AorZR = 182,
+	GimmickShotTrg_X = 183,
+	GimmickShotTrg_Y = 184,
+	GimmickShotOn_AorZR = 185,
+	GimmickShotOn_X = 186,
+	GimmickShotOn_Y = 187,
+	AtkXAorR1Trg = 188,
+	GuardTrg = 189,
+	AtkZRZL = 190,
+	AtkXOnOriginal = 191,
+	AtkAOnOriginal = 192,
+	PopActionOn = 193,
+	ActionB = 194,
+	CancelNoDelay = 195,
+	WireUtsusemi = 196,
+	WireUp_L2Release = 197,
+	WireUtsusemiOn = 198,
+	WireUtsusemiGunner = 199,
+	OtomoReconSpotRelease = 200,
+	ServantHelpUp = 201,
+	OtomoCommunicationR = 202,
+	DogRelease = 203,
+	IaiRelease = 204,
+};
 module.CommandButton2 = {
 	Atk_X = 0,
 	Atk_A = 1,
@@ -111,7 +318,10 @@ local function getTreeComponentCore()
 
 	return core
 end
-
+---comment
+---@param tbl table
+---@param vl number
+---@return boolean
 local function checkValueExistence(tbl, vl)
 	if tbl == nil then
 		return false
@@ -135,6 +345,11 @@ local function ModifyDamageReflexType1(null, damageReflexObject, weaponParam, wa
 		damageReflexObject:set_field("_StartFrame", weaponParam.StartFrame)
 		damageReflexObject:set_field("_EndFrame", weaponParam.EndFrame)
 	end
+end
+
+--- 将动作树的树实例抛出，方便外部自行调用
+function module.getTreeObj()
+	return getTreeComponentCore()
 end
 
 -- 从BHVT中直接抄过来的方法，用于复制某个已有的object，并添加至全局中
@@ -226,6 +441,8 @@ function module.getMasterPlayerUtils()
 	if not UmasterPlayer then
 		return nil
 	end
+	local BHVT = UmasterPlayer:call("get_GameObject"):call("getComponent(System.Type)",
+	sdk.typeof("via.behaviortree.BehaviorTree"))
 	local PlayerMotionCtrl = UmasterPlayer:get_field("_RefPlayerMotionCtrl")
 	UmasterPlayerIndex = UmasterPlayer:get_field("_PlayerIndex")
 	local PlayerUtils = {
@@ -236,10 +453,10 @@ function module.getMasterPlayerUtils()
 		playerWeaponType = UmasterPlayer:get_field("_playerWeaponType"),
 		getActionID = PlayerMotionCtrl:call("get_OldMotionID"),
 		getBankID = PlayerMotionCtrl:call("get_OldBankID"),
-		behaviorTree = UmasterPlayer:call("get_GameObject"):call("getComponent(System.Type)",
-			sdk.typeof("via.behaviortree.BehaviorTree")),
+		behaviorTree = BHVT,
 		playerInput = UmasterPlayer:call("get_GameObject"):call("getComponent(System.Type)",
-			sdk.typeof("snow.player.PlayerInput"))
+			sdk.typeof("snow.player.PlayerInput")),
+		NowFrame = math.floor(UmasterPlayer:call("getMotionNowFrame_Layer(System.Int32)", 1)),
 	}
 	return PlayerUtils
 end
@@ -251,7 +468,7 @@ function module.getCurrentNodeID()
 		return "Error"
 	end
 	local myBhvt = player.masterPlayer:call("get_GameObject"):call("getComponent(System.Type)",
-			sdk.typeof("via.behaviortree.BehaviorTree"))
+		sdk.typeof("via.behaviortree.BehaviorTree"))
 	return myBhvt:call("getCurrentNodeID", 0)
 end
 
@@ -297,6 +514,37 @@ function module.addAction(null, NodeID, ActionID)
 						actions:push_back(tonumber(ActionID))
 					end
 				end
+			end
+		end
+	end
+end
+
+---计时器
+----
+---一个计时器函数，使用方法是通过 yourVariable = toolkit:timer(时间,仅限一次) 来初始化，然后直接使用
+---
+---yourVariable()来作为检测依据，就如 if yourVariable() then
+---@param realSecond number
+---@param onlyOnce boolean
+---@return function
+function module.timer(null, realSecond, onlyOnce)
+	local realTimeSecond = realSecond
+	local savedTime = sdk.find_type_definition("via.Application"):get_method("get_UpTimeSecond"):call(nil)
+	local onceTrigger = false
+	return function()
+		if realTimeSecond == nil then
+			return false
+		else
+			local currentTime = sdk.find_type_definition("via.Application"):get_method("get_UpTimeSecond"):call(nil)
+			-- re.msg(savedTime)
+			-- re.msg(currentTime)
+			if (currentTime - savedTime >= realTimeSecond) and (not onceTrigger) then
+				if onlyOnce then
+					onceTrigger = true
+				end
+				return true
+			else
+				return false
 			end
 		end
 	end
@@ -755,7 +1003,7 @@ end
 -- 下面两段代码来自Sarfflow
 local function get_player_component(playerbase, component_type)
 	return playerbase:call("get_GameObject"):call("getComponent(System.Type)",
-			sdk.typeof(component_type))
+		sdk.typeof(component_type))
 end
 
 
@@ -766,7 +1014,7 @@ end
 ---@return nil
 function module.modifyColliderTab(null, param_tab, res_id, req_id)
 	local mRequestCollider = get_player_component(module.getMasterPlayerUtils().masterPlayer,
-			"via.physics.RequestSetCollider")
+		"via.physics.RequestSetCollider")
 	if not mRequestCollider then return false end
 	local collider_data = mRequestCollider:call("getRequestSetUserData(System.UInt32, System.UInt32)", res_id, req_id)
 	if not collider_data then return end
@@ -775,6 +1023,16 @@ function module.modifyColliderTab(null, param_tab, res_id, req_id)
 	end
 end
 
+function module.getColliderData(null,res_id, req_id)
+	local mRequestCollider = get_player_component(module.getMasterPlayerUtils().masterPlayer,
+		"via.physics.RequestSetCollider")
+	if not mRequestCollider then return false end
+	local collider_data = mRequestCollider:call("getRequestSetUserData(System.UInt32, System.UInt32)", res_id, req_id)
+	if not collider_data then
+		return 
+	end
+	return collider_data
+end
 -----------------------------------------
 -- 这个函数十分危险，如果你不知道如何控制添加的次数，请不要使用任何duplicate函数或者向全局中添加node，condition，state，action的函数
 ------------------------------------------
