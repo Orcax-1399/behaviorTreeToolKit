@@ -346,6 +346,10 @@ local function ModifyDamageReflexType1(null, damageReflexObject, weaponParam, wa
 		damageReflexObject:set_field("_EndFrame", weaponParam.EndFrame)
 	end
 end
+function module.getNowFrame()
+	local player = module.getMasterPlayerUtils().masterPlayer
+	return math.floor(player:call("getMotionNowFrame_Layer(System.Int32)", 1))
+end
 
 --- 将动作树的树实例抛出，方便外部自行调用
 function module.getTreeObj()
