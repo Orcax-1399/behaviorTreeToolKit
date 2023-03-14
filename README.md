@@ -5,4 +5,4 @@ This is a mhr modding library and depend on reframework by praydog and BHVT api 
 # ChangeLogs
 ## 3.14 update
 `getNowFrame()` -> a function to see current motion frame
-_change all `null` param into `self` thanks to (creig)[https://github.com/1170300604]_
+_change all `null` param into `self` thanks to [creig](https://github.com/1170300604)_
