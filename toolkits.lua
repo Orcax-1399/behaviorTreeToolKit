@@ -299,6 +299,8 @@ local modName
 local DebugVariable = false
 local first_times
 local onlyOnce = false
+local duplicatePref
+
 local function getTreeComponentCore()
 	local layer = nil
 	local tree = nil
@@ -318,6 +320,7 @@ local function getTreeComponentCore()
 
 	return core
 end
+
 ---comment
 ---@param tbl table
 ---@param vl number
@@ -333,10 +336,8 @@ local function checkValueExistence(tbl, vl)
 	end
 end
 
--- 用于修改任何DamageReflex判定，首先要钩住update方法，判定为_StartFrame与_EndFrame则为type 1
----
--- 已过时，请使用getAction函数获取实例，然后用set_field进行更改
----------------------------
+---用于修改任何DamageReflex判定，首先要钩住update方法，判定为_StartFrame与_EndFrame则为type 1
+---@warning 已过时，请使用getAction函数获取实例，然后用set_field进行更改
 local function ModifyDamageReflexType1(self, damageReflexObject, weaponParam, way)
 	if way == "Modify" then
 		damageReflexObject:set_field("_StartFrame", weaponParam.ModifiedStartFrame)
@@ -346,17 +347,9 @@ local function ModifyDamageReflexType1(self, damageReflexObject, weaponParam, wa
 		damageReflexObject:set_field("_EndFrame", weaponParam.EndFrame)
 	end
 end
-function module.getNowFrame()
-	local player = module.getMasterPlayerUtils().masterPlayer
-	return math.floor(player:call("getMotionNowFrame_Layer(System.Int32)", 1))
-end
 
---- 将动作树的树实例抛出，方便外部自行调用
-function module.getTreeObj()
-	return getTreeComponentCore()
-end
 
--- 从BHVT中直接抄过来的方法，用于复制某个已有的object，并添加至全局中
+---从BHVT中直接抄过来的方法，用于复制某个已有的object，并添加至全局中
 local function duplicate_managed_object_in_array(arr, i)
 	first_times = {}
 	local source = arr[i]
@@ -368,7 +361,7 @@ local function duplicate_managed_object_in_array(arr, i)
 	local td = source:get_type_definition()
 
 	while td ~= nil do
-		for i, getter in ipairs(td:get_methods()) do
+		for getter in ipairs(td:get_methods():get_elements()) do
 			local name_start = 5
 
 			local is_potential_getter = getter:get_num_params() == 0 and getter:get_name():find("get") == 1
@@ -400,7 +393,7 @@ local function duplicate_managed_object_in_array(arr, i)
 	}
 end
 
--- 一个内部专用的加event的方法，很懒，随手封装一个自己偷懒用，基本copy的addEvent，只是NodeIndex换成了Obj
+---一个内部专用的加event的方法，很懒，随手封装一个自己偷懒用，基本copy的addEvent，只是NodeIndex换成了Obj
 local function addEvent(NodeObj, ConditionID, EventIndex)
 	local treeObj = getTreeComponentCore()
 	local node_data = NodeObj:get_data()
@@ -435,9 +428,172 @@ local function addEvent(NodeObj, ConditionID, EventIndex)
 	end
 end
 
+--下面两段代码来自Sarfflow
+local function get_player_component(playerbase, component_type)
+	return playerbase:call("get_GameObject"):call("getComponent(System.Type)",
+			sdk.typeof(component_type))
+end
+
+---向全局的行为树中添加一个全新的static action，仅能从当前已有的Object复制
+---@warning 这个函数十分危险，如果你不知道如何控制添加的次数，请不要使用任何duplicate函数或者向全局中添加node，condition，state，action的函数
+local function duplicate_global_static_action(tree, i)
+	first_times = {}
+
+	--re.msg("[Dupe] Duping " .. tostring(i))
+
+	-- Duplicate the action method as well.
+	local action_methods = tree:get_data():get_static_action_methods()
+	action_methods:push_back(action_methods[i])
+
+	return duplicate_managed_object_in_array(tree:get_data():get_static_actions(), i)
+end
+
+---向全局的行为树中添加一个全新的action，仅能从当前已有的Object复制
+---@warning 这个函数十分危险，如果你不知道如何控制添加的次数，请不要使用任何duplicate函数或者向全局中添加node，condition，state，action的函数
+local function duplicate_global_action(tree, i)
+	first_times = {}
+
+	--re.msg("[Dupe] Duping " .. tostring(i))
+
+	-- Duplicate the action method as well.
+	local action_methods = tree:get_data():get_action_methods()
+	action_methods:push_back(action_methods[i])
+
+	return duplicate_managed_object_in_array(tree:get_actions(), i)
+end
+
+---向全局的行为树中添加一个全新的condition，仅能从当前已有的Object复制
+---@warning 这个函数十分危险，如果你不知道如何控制添加的次数，请不要使用任何duplicate函数或者向全局中添加node，condition，state，action的函数
+local function duplicate_global_condition(tree, i)
+	return duplicate_managed_object_in_array(tree:get_conditions(), i)
+end
+
+---向全局的行为树中添加一个全新的static condition，仅能从当前已有的Object复制
+---@warning 这个函数十分危险，如果你不知道如何控制添加的次数，请不要使用任何duplicate函数或者向全局中添加node，condition，state，action的函数
+local function duplicate_global_static_condition(tree, i)
+	return duplicate_managed_object_in_array(tree:get_data():get_static_conditions(), i)
+end
+
+---向全局的行为树中添加一个全新的static transition event，仅能从当前已有的Object复制
+---@warning 这个函数十分危险，如果你不知道如何控制添加的次数，请不要使用任何duplicate函数或者向全局中添加node，condition，state，action的函数
+local function duplicate_global_static_transition_event(tree, i)
+	return duplicate_managed_object_in_array(tree:get_data():get_static_transitions(), i)
+end
+
+---向全局的行为树中添加一个全新的transition event，仅能从当前已有的Object复制
+---@warning 这个函数十分危险，如果你不知道如何控制添加的次数，请不要使用任何duplicate函数或者向全局中添加node，condition，state，action的函数
+local function duplicate_global_transition_event(tree, i)
+	return duplicate_managed_object_in_array(tree:get_transitions(), i)
+end
+
+---comment
+---@param modName string
+---@param WeaponType number
+---@param Type string
+local function initDupicateConfig(modName, WeaponType, Type)
+	local file = json.load_file(modName)
+
+	if file == nil or file['off'] or (file[tostring(WeaponType)] == nil) then
+		duplicatePref = {
+			[WeaponType] = {
+				["Action"] = {
+					['LengthWhenLoad'] = 0,
+					['AddObj'] = {}
+				},
+				["Condition"] = {
+					['LengthWhenLoad'] = 0,
+					['AddObj'] = {}
+				},
+				["Event"] = {
+					['LengthWhenLoad'] = 0,
+					['AddObj'] = {}
+				}
+			}
+		}
+		json.dump_file(modName, duplicatePref)
+		initDupicateConfig(modName, WeaponType, Type)
+	else
+		duplicatePref = file
+	end
+end
+
+---comment
+---@param array any
+---@param modName string
+---@param weapontype number
+---@param Type string
+---@param function1 function
+---@param idTbl table
+---@param TblUsedToReturn table
+local function innerValidCheck(array, modName, weapontype, Type, function1, idTbl, TblUsedToReturn)
+	local arrayLength = array:get_size()
+	if duplicatePref[tostring(weapontype)][tostring(Type)]['LengthWhenLoad'] == 0 then
+		duplicatePref[tostring(weapontype)][tostring(Type)]['LengthWhenLoad'] = arrayLength
+	end
+	local prefLen = (duplicatePref[tostring(weapontype)][tostring(Type)]['AddObj'])
+	if prefLen == nil then
+		prefLen = 1
+	else
+		prefLen = #(duplicatePref[tostring(weapontype)][tostring(Type)]['AddObj'])
+	end
+	if arrayLength < duplicatePref[tostring(weapontype)][tostring(Type)]['LengthWhenLoad'] + prefLen then
+		function1()
+		duplicatePref[tostring(weapontype)][tostring(Type)]['AddObj'] = TblUsedToReturn
+		json.dump_file(modName, duplicatePref)
+		-- else
+		-- 	TblUsedToReturn = duplicatePref[tostring(weapontype)][tostring(Type)]['AddObj']
+	end
+end
+
 -- 以上是内部方法
 
--- 获得MasterPlayer的大部分属性，返回一个table
+
+--为内部函数提供公共引用
+module.getTreeComponentCore=getTreeComponentCore
+module.checkValueExistence=checkValueExistence
+module.ModifyDamageReflexType1=ModifyDamageReflexType1
+module.duplicate_managed_object_in_array=duplicate_managed_object_in_array
+module.addEvent=addEvent
+module.get_player_component=get_player_component
+module.duplicate_global_static_action=duplicate_global_static_action
+module.duplicate_global_action=duplicate_global_action
+module.duplicate_global_condition=duplicate_global_condition
+module.duplicate_global_static_condition=duplicate_global_static_condition
+module.duplicate_global_static_transition_event=duplicate_global_static_transition_event
+module.duplicate_global_transition_event=duplicate_global_transition_event
+
+
+---comment by creig 22/3/14
+---用于引入声明于其他module的扩展函数所添加的extend方法
+
+---@usage 详细了解请阅读https://www.caimogu.cc/post/377940.html
+---在扩展module中
+---module_added = {}
+---function module_added:YourFunctionName(parm)
+---		local treeObj = self.getTreeComponentCore()
+---在主module中
+---toolkits:extend(toolkits_added)
+
+---@param class table 要引入的模块
+function module:extend(class)
+	class.__index=class
+	setmetatable(self, class)
+	---@todo 重构setmetatable
+end
+
+
+
+function module.getNowFrame()
+	local player = module.getMasterPlayerUtils().masterPlayer
+	return math.floor(player:call("getMotionNowFrame_Layer(System.Int32)", 1))
+end
+
+--- 将动作树的树实例抛出，方便外部自行调用
+function module.getTreeObj()
+	return getTreeComponentCore()
+end
+
+--- 获得MasterPlayer的大部分属性，返回一个table
 function module.getMasterPlayerUtils()
 	local UplayerManager = sdk.get_managed_singleton('snow.player.PlayerManager')
 	if not UplayerManager then return nil end
@@ -465,7 +621,7 @@ function module.getMasterPlayerUtils()
 	return PlayerUtils
 end
 
--- 返回当前的nodeID，
+--- 返回当前的nodeID，
 function module.getCurrentNodeID()
 	local player = module.getMasterPlayerUtils()
 	if player == nil then
@@ -476,13 +632,13 @@ function module.getCurrentNodeID()
 	return myBhvt:call("getCurrentNodeID", 0)
 end
 
--- 输入一个键值，来判断当前这个键是否按下，可以使用toolKit内置的commandButton2类来填入
+--- 输入一个键值，来判断当前这个键是否按下，可以使用toolKit内置的commandButton2类来填入
 function module.isKeyOn(self, key)
 	local mInput = module.getMasterPlayerUtils().playerInput
 	return mInput:call("get_mNow"):call("isOn(snow.player.PlayerInput.CommandButton2)", key)
 end
 
--- 立即跳转到某个节点
+--- 立即跳转到某个节点
 function module.jumpToNode(self, node_id)
 	module.getMasterPlayerUtils().behaviorTree:call(
 		"setCurrentNode(System.UInt64, System.UInt32, via.behaviortree.SetNodeInfo)"
@@ -492,7 +648,7 @@ function module.jumpToNode(self, node_id)
 		nil)
 end
 
--- 对一个node添加已有Action
+--- 对一个node添加已有Action
 function module.addAction(self, NodeID, ActionID)
 	local layer
 	local tree
@@ -524,9 +680,7 @@ function module.addAction(self, NodeID, ActionID)
 end
 
 ---计时器
-----
 ---一个计时器函数，使用方法是通过 yourVariable = toolkit:timer(时间,仅限一次) 来初始化，然后直接使用
----
 ---yourVariable()来作为检测依据，就如 if yourVariable() then
 ---@param realSecond number
 ---@param onlyOnce boolean
@@ -555,8 +709,7 @@ function module.timer(self, realSecond, onlyOnce)
 end
 
 --- 添加action的变体，对于部分特殊需求需要添加多个相同的action，使用这个函数.
---
--- NumLimit即为你要添加action的个数
+--- @param NumLimit number 你要添加action的个数
 function module.addMutiAction(self, NodeID, ActionID, NumLimit)
 	local layer
 	local tree
@@ -593,7 +746,7 @@ function module.addMutiAction(self, NodeID, ActionID, NumLimit)
 	end
 end
 
--- 对一个node添加已有Action，但是NodeIndex，偷懒用
+--- 对一个node添加已有Action，但是NodeIndex，偷懒用
 function module.addAction_NodeIndex(self, NodeIndex, ActionID)
 	local layer
 	local tree
@@ -624,7 +777,7 @@ function module.addAction_NodeIndex(self, NodeIndex, ActionID)
 	end
 end
 
--- 改变一个已有Condition-state对的Condition
+--- 改变一个已有Condition-state对的Condition
 function module.replaceCondition(self, NodeID, OriginalConditionID, ReplacedConditionID)
 	local layer
 	local tree
@@ -658,7 +811,7 @@ function module.replaceCondition(self, NodeID, OriginalConditionID, ReplacedCond
 	end
 end
 
--- 改变一个已有Condition-state对的State
+--- 改变一个已有Condition-state对的State
 function module.replaceTransition(self, NodeID, ConditionID, ReplacedStateIndex)
 	local layer
 	local tree
@@ -698,8 +851,8 @@ function module.replaceTransition(self, NodeID, ConditionID, ReplacedStateIndex)
 	end
 end
 
--- 增加一个Condition-State对，如果已经有相同的Condition，则不会添加，如果想变更一个已有Condition的State（比如大剑本来派生铁山靠换成派生真蓄），请使用replaceTransition函数
--- (如果你需要使用AddEvent来魔改这个派生的event，whetherAddDefaultEvent这项需要为true)
+--- 增加一个Condition-State对，如果已经有相同的Condition，则不会添加，如果想变更一个已有Condition的State（比如大剑本来派生铁山靠换成派生真蓄），请使用replaceTransition函数
+--- (如果你需要使用AddEvent来魔改这个派生的event，whetherAddDefaultEvent这项需要为true)
 function module.addConditionPairs(self, NodeID, ConditionID, transitionStateIndex, whetherAddDefaultEvent)
 	local layer
 	local tree
@@ -745,7 +898,7 @@ function module.addConditionPairs(self, NodeID, ConditionID, transitionStateInde
 	end
 end
 
--- 对一个action的Field进行改变
+--- 对一个action的Field进行改变
 function module.modifyActionField_ByArgs(self, ActionArg, NodeID, weapontype, FieldName, FieldValue)
 	local priPlayer = module.getMasterPlayerUtils()
 	local ActionObj = sdk.to_managed_object(ActionArg[2])
@@ -758,7 +911,7 @@ function module.modifyActionField_ByArgs(self, ActionArg, NodeID, weapontype, Fi
 	end
 end
 
--- 通过actionIndex直接获取游戏内的ActionObject
+--- 通过actionIndex直接获取游戏内的ActionObject
 function module.getActionObject(self, ActionIndex)
 	local treeObj = getTreeComponentCore()
 	local actions = treeObj:get_actions()
@@ -770,12 +923,10 @@ function module.modifyActionField(self, ActionIndex, FieldName, FieldValue)
 	Action:set_field(FieldName, FieldValue)
 end
 
--- 用于修改任何DamageReflex判定，首先要钩住update方法，判定为_StartFrame与_EndFrame则为type 1，目前还没添加type2，但是我记得有这个条件。NodeID 为"IGNORE"则无视Node条件，weapontype为"IGNORE"则为无视武器条件
--- weaponType 应当使用模块提供的playerWeaponTypeIndex常量
--- NODEID 需要填写ID而不是INDEX
------------------------------
---- 已过时，请使用getAction函数获取实例，然后用set_field进行更改
------
+--- 用于修改任何DamageReflex判定，首先要钩住update方法，判定为_StartFrame与_EndFrame则为type 1，目前还没添加type2，但是我记得有这个条件。NodeID 为"IGNORE"则无视Node条件，weapontype为"IGNORE"则为无视武器条件
+--- @param weapontype number 应当使用模块提供的playerWeaponTypeIndex常量
+--- @param NodeID number 需要填写ID而不是INDEX
+--- @warning 已过时，请使用getAction函数获取实例，然后用set_field进行更改
 function module.modifyGPAIO(self, damageReflexObject, weaponParam, NodeID, type, weapontype)
 	local priPlayer = module.getMasterPlayerUtils()
 	local DamageReflexRoot = sdk.to_managed_object(damageReflexObject[2])
@@ -789,7 +940,7 @@ function module.modifyGPAIO(self, damageReflexObject, weaponParam, NodeID, type,
 	end
 end
 
--- 移除一个node中指定的action
+--- 移除一个node中指定的action
 function module.eraseAction(self, NodeID, ActionIndex)
 	local treeObj = getTreeComponentCore()
 	local node = treeObj:get_node_by_id(NodeID)
@@ -802,14 +953,14 @@ function module.eraseAction(self, NodeID, ActionIndex)
 	end
 end
 
--- 直接通过Index得到Condition的Object，可以直接用set_field进行操作
+--- 直接通过Index得到Condition的Object，可以直接用set_field进行操作
 function module.getConditionObj(self, ConditionIndex)
 	local treeObj = getTreeComponentCore()
 	local condition_array = treeObj:get_conditions()
 	return condition_array[ConditionIndex]
 end
 
--- 为一个特定的Node下特定的Condition添加指定的EventIndex
+--- 为一个特定的Node下特定的Condition添加指定的EventIndex
 function module.addTransitionEvent(self, NodeID, ConditionID, EventIndex)
 	local treeObj = getTreeComponentCore()
 	local node_data = treeObj:get_node_by_id(NodeID):get_data()
@@ -846,7 +997,7 @@ function module.addTransitionEvent(self, NodeID, ConditionID, EventIndex)
 	end
 end
 
--- 删除一个特定的Node下特定的Condition的指定的EventIndex，如果该condition没有Event则不会操作，如果有多个event只会删除特定的那个
+--- 删除一个特定的Node下特定的Condition的指定的EventIndex，如果该condition没有Event则不会操作，如果有多个event只会删除特定的那个
 function module.eraseTransitionEvent(self, NodeID, ConditionID, EventIndex)
 	local treeObj = getTreeComponentCore()
 	local node_data = treeObj:get_node_by_id(NodeID):get_data()
@@ -877,17 +1028,16 @@ function module.eraseTransitionEvent(self, NodeID, ConditionID, EventIndex)
 	end
 end
 
--- 根据TransitionEventIndex拿到特定的 EventObject
+--- 根据TransitionEventIndex拿到特定的 EventObject
 function module.getEventObject(self, TransitionEventIndex)
 	local treeObj = getTreeComponentCore()
 	local TransitionEvents = treeObj:get_transitions()
 	return TransitionEvents[TransitionEventIndex]
 end
 
--- 对于所有node中含有该特定state的condition添加一个特定的Event
---------------------------------
---这个函数只应该被执行一次！如果循环执行很可能导致性能问题！确定你能handle住再使用这个！
 -------------------------------
+--- 对于所有node中含有该特定state的condition添加一个特定的Event
+---@warning 这个函数只应该被执行一次！如果循环执行很可能导致性能问题！确定你能handle住再使用这个！
 function module.addEventToAll_SpecificState(self, stateIndex, EventIndex)
 	local tree = getTreeComponentCore()
 	local nodes = tree:get_nodes()
@@ -904,13 +1054,11 @@ function module.addEventToAll_SpecificState(self, stateIndex, EventIndex)
 	end
 end
 
---这个函数只应该被执行一次！如果循环执行很可能导致性能问题！确定你能handle住再使用这个！
--------------------------------
--- 将一个特定的state批量替换成另一个state
+--- 将一个特定的state批量替换成另一个state
+--- 注意！这个批量替换就和文档中的批量查询替换一样，很可能有些你不想替换的东西被替换了
+--- 发生这种情况时，请使用最后一个参数nodeID_BlackList,其中传入一个表，类似(nodeID1,nodeID2)，不需要则留空
 ---
--- 注意！这个批量替换就和文档中的批量查询替换一样，很可能有些你不想替换的东西被替换了
----
---发生这种情况时，请使用最后一个参数nodeID_BlackList,其中传入一个表，类似(nodeID1,nodeID2)，不需要则留空
+---@warning 这个函数只应该被执行一次！如果循环执行很可能导致性能问题！确定你能handle住再使用这个！
 function module.replaceAllState_SpecificState(self, originalState, targetState, blackList)
 	if blackList == nil then
 		blackList = {}
@@ -932,9 +1080,8 @@ function module.replaceAllState_SpecificState(self, originalState, targetState, 
 	end
 end
 
---这个函数只应该被执行一次！如果循环执行很可能导致性能问题！确定你能handle住再使用这个！
--------------------------------
--- 修改所有node中含有该特定state的condition的一个field
+--- 获取所有node中含有该特定state的所有condition
+---@warning 这个函数只应该被执行一次！如果循环执行很可能导致性能问题！确定你能handle住再使用这个！
 function module.getAllConditions_SpecificState(self, stateIndex)
 	local tree = getTreeComponentCore()
 	local nodes = tree:get_nodes()
@@ -955,9 +1102,10 @@ function module.getAllConditions_SpecificState(self, stateIndex)
 	end
 end
 
--- 为一个节点组批量替换它的派生
-----------------------------
--- 什么是动作组？ 比如长枪的防御冲刺，有四个方向，但是是四个不同的node，他们的派生几乎一致，最重要的是你需要修改的部分在这一组node中的顺序或者逆序位置相同，你仍需你修改的第一个节点的ConditionIndex来进行索引
+--- 为一个节点组批量替换它的派生
+---
+---什么是动作组？ 比如长枪的防御冲刺，有四个方向，但是是四个不同的node，他们的派生几乎一致，
+---最重要的是你需要修改的部分在这一组node中的顺序或者逆序位置相同，你仍需你修改的第一个节点的ConditionIndex来进行索引
 function module.replaceTransitionForNodeGroup(self, nodeGroupTbl, ConditionIndex, targetStateIndex)
 	if nodeGroupTbl == nil then
 		return
@@ -980,16 +1128,11 @@ function module.replaceTransitionForNodeGroup(self, nodeGroupTbl, ConditionIndex
 	end
 end
 
--- 修改防御判定，guardType请使用内置的module.guardType
---
--- GuardAngle填入角度，这个角度是一侧的，实际游戏中防御角度是这个值×2（左右两边）
--- resistTbl 分别为中退阈值和大退阈值，超过第一个值就是中退，超过第二个大退，传入一个表类型，类似
---
---{中退数字,大退数字}。
---
--- 这个值是武器防御的初始值，后续出了防御性能后会直接加在这个基础值上
---
--- 崛起这作防御挺诡异的，你可以看见多个武器共用了同一个数据，意味着你改大剑的同时盾斧的数据也会变，不知道卡婊怎么想的
+--- 修改防御判定，guardType请使用内置的module.guardType
+--- @param GuardAngle number 填入角度，这个角度是一侧的，实际游戏中防御角度是这个值×2（左右两边）
+--- @param resistTbl table {中退数字,大退数字} 传入一个表类型,分别为中退阈值和大退阈值，超过第一个值就是中退，超过第二个大退。
+---这个值是武器防御的初始值，后续出了防御性能后会直接加在这个基础值上崛起这作防御挺诡异的，你可以看见多个武器共用了同一个数据，
+---意味着你改大剑的同时盾斧的数据也会变，不知道卡婊怎么想的
 function module.modifyGuardInfo(self, guardType, GuardAngle, resistTbl)
 	local guard = sdk.create_instance("snow.player.PlayerDamageDefine", true)
 	local _guard = guard:get_field("_GuardParam")
@@ -1004,17 +1147,10 @@ function module.modifyGuardInfo(self, guardType, GuardAngle, resistTbl)
 	end
 end
 
--- 下面两段代码来自Sarfflow
-local function get_player_component(playerbase, component_type)
-	return playerbase:call("get_GameObject"):call("getComponent(System.Type)",
-		sdk.typeof(component_type))
-end
-
-
 ---用于修改近战col参数的函数，param_tab的每一条都对应rcol中的栏目，res_id与req_id均可以使用配套工具查询
 ---@param param_tab table
----@param res_id integer
----@param req_id integer
+---@param res_id number
+---@param req_id number
 ---@return nil
 function module.modifyColliderTab(self, param_tab, res_id, req_id)
 	local mRequestCollider = get_player_component(module.getMasterPlayerUtils().masterPlayer,
@@ -1037,138 +1173,14 @@ function module.getColliderData(self,res_id, req_id)
 	end
 	return collider_data
 end
------------------------------------------
--- 这个函数十分危险，如果你不知道如何控制添加的次数，请不要使用任何duplicate函数或者向全局中添加node，condition，state，action的函数
-------------------------------------------
--- 向全局的行为树中添加一个全新的static action，仅能从当前已有的Object复制
-local function duplicate_global_static_action(self, tree, i)
-	first_times = {}
-
-	--re.msg("[Dupe] Duping " .. tostring(i))
-
-	-- Duplicate the action method as well.
-	local action_methods = tree:get_data():get_static_action_methods()
-	action_methods:push_back(action_methods[i])
-
-	return duplicate_managed_object_in_array(tree:get_data():get_static_actions(), i)
-end
-
------------------------------------------
--- 这个函数十分危险，如果你不知道如何控制添加的次数，请不要使用任何duplicate函数或者向全局中添加node，condition，state，action的函数
-------------------------------------------
--- 向全局的行为树中添加一个全新的action，仅能从当前已有的Object复制
-local function duplicate_global_action(self, tree, i)
-	first_times = {}
-
-	--re.msg("[Dupe] Duping " .. tostring(i))
-
-	-- Duplicate the action method as well.
-	local action_methods = tree:get_data():get_action_methods()
-	action_methods:push_back(action_methods[i])
-
-	return duplicate_managed_object_in_array(tree:get_actions(), i)
-end
-
------------------------------------------
--- 这个函数十分危险，如果你不知道如何控制添加的次数，请不要使用任何duplicate函数或者向全局中添加node，condition，state，action的函数
-------------------------------------------
--- 向全局的行为树中添加一个全新的condition，仅能从当前已有的Object复制
-local function duplicate_global_condition(self, tree, i)
-	return duplicate_managed_object_in_array(tree:get_conditions(), i)
-end
-
------------------------------------------
--- 这个函数十分危险，如果你不知道如何控制添加的次数，请不要使用任何duplicate函数或者向全局中添加node，condition，state，action的函数
-------------------------------------------
--- 向全局的行为树中添加一个全新的static condition，仅能从当前已有的Object复制
-local function duplicate_global_static_condition(self, tree, i)
-	return duplicate_managed_object_in_array(tree:get_data():get_static_conditions(), i)
-end
-
------------------------------------------
--- 这个函数十分危险，如果你不知道如何控制添加的次数，请不要使用任何duplicate函数或者向全局中添加node，condition，state，action的函数
-------------------------------------------
--- 向全局的行为树中添加一个全新的static transition event，仅能从当前已有的Object复制
-local function duplicate_global_static_transition_event(self, tree, i)
-	return duplicate_managed_object_in_array(tree:get_data():get_static_transitions(), i)
-end
-
------------------------------------------
--- 这个函数十分危险，如果你不知道如何控制添加的次数，请不要使用任何duplicate函数或者向全局中添加node，condition，state，action的函数
-------------------------------------------
--- 向全局的行为树中添加一个全新的transition event，仅能从当前已有的Object复制
-local function duplicate_global_transition_event(self, tree, i)
-	return duplicate_managed_object_in_array(tree:get_transitions(), i)
-end
-local duplicatePref
-
----comment
----@param modName string
----@param WeaponType integer
----@param Type string
-local function initDupicateConfig(modName, WeaponType, Type)
-	local file = json.load_file(modName)
-
-	if file == nil or file['off'] or (file[tostring(WeaponType)] == nil) then
-		duplicatePref = {
-			[WeaponType] = {
-				["Action"] = {
-					['LengthWhenLoad'] = 0,
-					['AddObj'] = {}
-				},
-				["Condition"] = {
-					['LengthWhenLoad'] = 0,
-					['AddObj'] = {}
-				},
-				["Event"] = {
-					['LengthWhenLoad'] = 0,
-					['AddObj'] = {}
-				}
-			}
-		}
-		json.dump_file(modName, duplicatePref)
-		initDupicateConfig(modName, WeaponType, Type)
-	else
-		duplicatePref = file
-	end
-end
-
----comment
----@param array any
----@param modName string
----@param weapontype integer
----@param Type string
----@param function1 function
----@param idTbl table
----@param TblUsedToReturn table
-local function innerValidCheck(array, modName, weapontype, Type, function1, idTbl, TblUsedToReturn)
-	local arrayLength = array:get_size()
-	if duplicatePref[tostring(weapontype)][tostring(Type)]['LengthWhenLoad'] == 0 then
-		duplicatePref[tostring(weapontype)][tostring(Type)]['LengthWhenLoad'] = arrayLength
-	end
-	local prefLen = (duplicatePref[tostring(weapontype)][tostring(Type)]['AddObj'])
-	if prefLen == nil then
-		prefLen = 1
-	else
-		prefLen = #(duplicatePref[tostring(weapontype)][tostring(Type)]['AddObj'])
-	end
-	if arrayLength < duplicatePref[tostring(weapontype)][tostring(Type)]['LengthWhenLoad'] + prefLen then
-		function1()
-		duplicatePref[tostring(weapontype)][tostring(Type)]['AddObj'] = TblUsedToReturn
-		json.dump_file(modName, duplicatePref)
-		-- else
-		-- 	TblUsedToReturn = duplicatePref[tostring(weapontype)][tostring(Type)]['AddObj']
-	end
-end
 
 ---该函数用于复制某个action/event/condition并形成一个新的独立的实例，这个实例可以单独进行调整而不影响原有的action/event/condition
+---@warning 这个功能是实验性质的！并且需要绑定 onTerminateVM函数使用
 ---
----这个功能是实验性质的！并且需要绑定 onTerminateVM函数使用
-----
 ---@param Type string "为 Action|Condition|Event 中的一个"
 ---@param idTbl table "id表，这个id即为Action/conditon/Event的Index"
 ---@param modName string "即为你mod的名称，用于生成一份配置文件"
----@param weapontype integer "武器类型索引"
+---@param weapontype number "武器类型索引"
 ---@return table|nil "生成的action/condition/event的id表，格式为{object,index},调用时使用table[i][object]直接拿到实例，用table[i][index]拿到索引"
 function module.duplicateRegister(self, Type, idTbl, modName, weapontype)
 	local cacheTable = {}
@@ -1189,7 +1201,7 @@ function module.duplicateRegister(self, Type, idTbl, modName, weapontype)
 			array = Tree:get_actions()
 			innerValidCheck(array, modName, weapontype, Type, function()
 				for index, value in ipairs(idTbl) do
-					table.insert(TblUsedToReturn, duplicate_global_action(self, getTreeComponentCore(), value))
+					table.insert(TblUsedToReturn, duplicate_global_action(getTreeComponentCore(), value))
 				end
 			end, idTbl, TblUsedToReturn)
 		elseif Type == "Event" then
@@ -1203,7 +1215,7 @@ function module.duplicateRegister(self, Type, idTbl, modName, weapontype)
 			array = Tree:get_conditions()
 			innerValidCheck(array, modName, weapontype, Type, function()
 				for index, value in ipairs(idTbl) do
-					table.insert(TblUsedToReturn, duplicate_global_condition(self, getTreeComponentCore(), value))
+					table.insert(TblUsedToReturn, duplicate_global_condition(getTreeComponentCore(), value))
 				end
 			end, idTbl, TblUsedToReturn)
 		end
