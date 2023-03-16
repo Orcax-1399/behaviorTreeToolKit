@@ -1290,6 +1290,70 @@ function module.checkInMainField()
 	return IsFieldMainOutZone or IsFieldMainZone
 end
 
+---## 获取玩家坐标
+---获取玩家坐标并进行偏移，如果不填参数则默认获取玩家坐标（默认应该在脚底）
+---@param xOffset number
+---@param yOffset number
+---@param zOffset number
+---@return nil|vec3
+function module.getPlayerPos(xOffset,yOffset,zOffset)
+	if not xOffset then
+		xOffset = 0
+	end
+	if not yOffset then
+		yOffset = 0
+	end
+	if not zOffset then
+		zOffset = 0
+	end
+	local masterPlayer = module.getMasterPlayerUtils()
+	if not masterPlayer then
+		return nil
+	end
+	local position = masterPlayer:call("get_Pos()")
+	position.x = position.x + xOffset
+	position.y = position.y + yOffset
+	position.z = position.z + zOffset
+	return position
+end
+
+
+---# 生成特效
+--- 可以通过调用`getPlayerPos()`来获得玩家坐标。不知道Quaternion怎么来？给我去看sdk！或者你可以抄次元斩的处理，如果你看得懂的话。
+--
+--- `ContainerID`和`ElementID`如果做特效的应该会比较熟悉，这里不多赘述,playSpeed不填默认为1.0
+---@param ContainerID integer
+---@param ElementID integer
+---@param position vec3
+---@param Quaternion Quaternion
+---@param playSpeed number
+function module.callEffect(ContainerID,ElementID,position,Quaternion,playSpeed)
+	if not playSpeed then
+		playSpeed = 1.0
+	end
+	local masterPlayer = module.getMasterPlayerUtils()
+	if not masterPlayer then
+		return
+	end
+	local EffManeger = masterPlayer:call("getObjectEffectManager")
+	if not EffManeger then
+		return
+	end
+	local effectContainer = sdk.create_instance("via.effect.script.EffectID", true):add_ref() -- 初始化effect容器
+	effectContainer.ContainerID = ContainerID -- 填入effect相关属性
+	effectContainer.ElementID = ElementID -- 同上
+	local ti = sdk.create_instance("via.effect.script.EffectManager.WwiseTriggerInfo", true):add_ref()
+	if ContainerID and ElementID and position and Quaternion then
+		local eff = EffManeger:call("requestEffect(via.effect.script.EffectID, via.vec3, via.Quaternion, via.GameObject, System.String, via.effect.script.EffectManager.WwiseTriggerInfo)"
+						,
+						effectContainer, position, Quaternion, nil, nil, ti)
+					if eff then
+						eff:update()
+						eff:setPlaySpeed(playSpeed)
+					end
+	end
+end
+
 function module.manualRefreashDuplicate(self, modName)
 	json.dump_file(modName, { ["off"] = true })
 end

@@ -9,3 +9,5 @@ This is a mhr modding library and depend on reframework by praydog and BHVT api 
 ## 3.16 update
 1. `onlyOncePerMotion` -> a function to control the content to run only once every motion (return boolean value,using in if...then sentence)
 2. `jumpFrame(frame)` -> a function to jump to target frame in current motion thanks to [yunWuLian](https://github.com/yun-wulian)
+3. `callEffect(ContainerID,ElementID,position,Quaternion,playSpeed)` -> a hard and basic way to use effect. It can spawn on any position you want.
+4. `getPlayerPos(xOffset,yOffset,zOffset)` -> a wrapper for `masterPlayer:get_Pos()` which can apply an offset at the same time.
