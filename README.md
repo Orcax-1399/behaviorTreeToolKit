@@ -8,4 +8,4 @@ This is a mhr modding library and depend on reframework by praydog and BHVT api 
 2. _change all `null` param into `self` thanks to [creig](https://github.com/1170300604)_
 ## 3.16 update
 1. `onlyOncePerMotion` -> a function to control the content to run only once every motion (return boolean value,using in if...then sentence)
-2. `jumpFrame(frame)` -> a function to jump to target frame in current motion 
+2. `jumpFrame(frame)` -> a function to jump to target frame in current motion thanks to [yunWuLian](https://github.com/yun-wulian)
