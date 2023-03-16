@@ -621,6 +621,40 @@ function module.getMasterPlayerUtils()
 	return PlayerUtils
 end
 
+---# 计数器
+---以motion为单位，使其在每一个motion中仅执行一次。
+---使用方法和timer类似，先用`a=toolkit:onlyOncePerMotion()`进行初始化，然后`a()`进行使用
+---@return function
+function module.onlyOncePerMotion()
+	local CurrentMotion = nil
+	local lastMotion = module.getMasterPlayerUtils().getActionID
+	return function ()
+		if not lastMotion then
+			return false
+		end
+		CurrentMotion = module.getMasterPlayerUtils().getActionID
+		if not (lastMotion == CurrentMotion) then
+			lastMotion = CurrentMotion
+			return true
+		else
+			return false
+		end
+	end
+end
+
+---# 跳帧
+---### 这个函数需要控制仅执行一次，否则你的动作将定格在你设定的帧数
+---跳转到当前动作的某一帧，随后向后播放，参数必须为**浮点型**(40.0)
+---@param frame number
+function module.jumpFrame(frame)
+	local playerBase = module.getMasterPlayerUtils()
+	if not playerBase then
+		return
+	end
+	local treeLayer = playerBase:call("getMotionLayer",0)
+	treeLayer:set_Frame(frame)
+end
+
 --- 返回当前的nodeID，
 function module.getCurrentNodeID()
 	local player = module.getMasterPlayerUtils()
