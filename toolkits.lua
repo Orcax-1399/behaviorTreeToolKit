@@ -647,7 +647,7 @@ end
 ---跳转到当前动作的某一帧，随后向后播放，参数必须为**浮点型**(40.0)
 ---@param frame number
 function module.jumpFrame(frame)
-	local playerBase = module.getMasterPlayerUtils()
+	local playerBase = module.getMasterPlayerUtils().masterPlayer
 	if not playerBase then
 		return
 	end
