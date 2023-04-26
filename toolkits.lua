@@ -306,19 +306,22 @@ local function getTreeComponentCore()
 	local tree = nil
 	local playercomp = (module.getMasterPlayerUtils()).playerGameObj
 	local motion_fsm2 = playercomp:call("getComponent(System.Type)", sdk.typeof("via.motion.MotionFsm2"))
-	local isCollision = false
-	local core = nil
-	if playercomp ~= nil then
-		if motion_fsm2 ~= nil then
-			layer = motion_fsm2:call("getLayer", 0)
-			if layer ~= nil then
-				tree = layer:get_tree_object()
-				return tree
-			end
-		end
-	end
 
-	return core
+	if playercomp == nil then return end
+	if motion_fsm2 == nil then return end
+
+	layer = motion_fsm2:call("getLayer", 0)
+	if layer == nil then return end
+
+	tree = layer:get_tree_object()
+	return tree
+end
+
+local function getNodeByNodeID(NodeID)
+	local tree = getTreeComponentCore()
+	if tree == nil then return end
+
+	return tree:get_node_by_id(NodeID)
 end
 
 ---comment
@@ -334,6 +337,7 @@ local function checkValueExistence(tbl, vl)
 			return true
 		end
 	end
+	return false
 end
 
 ---用于修改任何DamageReflex判定，首先要钩住update方法，判定为_StartFrame与_EndFrame则为type 1
@@ -347,7 +351,6 @@ local function ModifyDamageReflexType1(self, damageReflexObject, weaponParam, wa
 		damageReflexObject:set_field("_EndFrame", weaponParam.EndFrame)
 	end
 end
-
 
 ---从BHVT中直接抄过来的方法，用于复制某个已有的object，并添加至全局中
 local function duplicate_managed_object_in_array(arr, i)
@@ -395,7 +398,7 @@ end
 
 ---一个内部专用的加event的方法，很懒，随手封装一个自己偷懒用，基本copy的addEvent，只是NodeIndex换成了Obj
 local function addEvent(NodeObj, ConditionID, EventIndex)
-	local treeObj = getTreeComponentCore()
+	-- local treeObj = getTreeComponentCore()
 	local node_data = NodeObj:get_data()
 	local Conditions = node_data:get_transition_conditions()
 	local TransitionEvents = node_data:get_transition_events()
@@ -598,9 +601,7 @@ function module.getMasterPlayerUtils()
 	local UplayerManager = sdk.get_managed_singleton('snow.player.PlayerManager')
 	if not UplayerManager then return nil end
 	local UmasterPlayer = UplayerManager:call("findMasterPlayer")
-	if not UmasterPlayer then
-		return nil
-	end
+	if not UmasterPlayer then return nil end
 	local BHVT = UmasterPlayer:call("get_GameObject"):call("getComponent(System.Type)",
 	sdk.typeof("via.behaviortree.BehaviorTree"))
 	local PlayerMotionCtrl = UmasterPlayer:get_field("_RefPlayerMotionCtrl")
@@ -619,6 +620,19 @@ function module.getMasterPlayerUtils()
 		NowFrame = math.floor(UmasterPlayer:call("getMotionNowFrame_Layer(System.Int32)", 1)),
 	}
 	return PlayerUtils
+end
+
+---用于检测是否在战斗场地（包括训练场）的函数，如果不想在城镇使用函数并且不知道该怎么判断，用这个就对了，返回一个布尔值，直接塞在if的条件里
+---@return boolean
+function module.checkInMainField()
+	local playerUtils = module.getMasterPlayerUtils()
+	if playerUtils == nil then
+		return false
+	end
+	local masterPlayer = playerUtils.masterPlayer
+	local IsFieldMainOutZone = masterPlayer:call("get_IsFieldMainOutZone")
+	local IsFieldMainZone = masterPlayer:call("get_IsFieldMainZone")
+	return IsFieldMainOutZone or IsFieldMainZone
 end
 
 ---# 计数器
@@ -684,33 +698,21 @@ end
 
 --- 对一个node添加已有Action
 function module.addAction(self, NodeID, ActionID)
-	local layer
-	local tree
-	local playercomp = (module.getMasterPlayerUtils()).playerGameObj
-	local motion_fsm2 = playercomp:call("getComponent(System.Type)", sdk.typeof("via.motion.MotionFsm2"))
 	local isCollision = false
-	if playercomp ~= nil then
-		if motion_fsm2 ~= nil then
-			layer = motion_fsm2:call("getLayer", 0)
-			if layer ~= nil then
-				tree = layer:get_tree_object()
-				if tree ~= nil then
-					local node = tree:get_node_by_id(NodeID)
-					if node == nil then return end
-					local node_data = node:get_data()
-					local actions = node_data:get_actions()
-					for index, value in ipairs(actions) do
-						if tonumber(value) == ActionID then
-							isCollision = true
-						end
-					end
-					if not isCollision then
-						actions:push_back(tonumber(ActionID))
-					end
-				end
-			end
+
+	local node = getNodeByNodeID(NodeID)
+	if node == nil then return end
+
+	local node_data = node:get_data()
+	actions = node_data:get_actions()
+	for index, value in ipairs(actions) do
+		if tonumber(value) == ActionID then
+			isCollision = true
 		end
 	end
+
+	if isCollision then return end
+	actions:push_back(tonumber(ActionID))
 end
 
 ---计时器
@@ -724,163 +726,114 @@ function module.timer(self, realSecond, onlyOnce)
 	local savedTime = sdk.find_type_definition("via.Application"):get_method("get_UpTimeSecond"):call(nil)
 	local onceTrigger = false
 	return function()
-		if realTimeSecond == nil then
-			return false
-		else
-			local currentTime = sdk.find_type_definition("via.Application"):get_method("get_UpTimeSecond"):call(nil)
-			-- re.msg(savedTime)
-			-- re.msg(currentTime)
-			if (currentTime - savedTime >= realTimeSecond) and (not onceTrigger) then
-				if onlyOnce then
-					onceTrigger = true
-				end
-				return true
-			else
-				return false
+		if realTimeSecond == nil then return false end
+		local currentTime = sdk.find_type_definition("via.Application"):get_method("get_UpTimeSecond"):call(nil)
+		-- re.msg(savedTime)
+		-- re.msg(currentTime)
+		if (currentTime - savedTime >= realTimeSecond) and (not onceTrigger) then
+			if onlyOnce then
+				onceTrigger = true
 			end
+			return true
 		end
+
+		return false
 	end
 end
 
 --- 添加action的变体，对于部分特殊需求需要添加多个相同的action，使用这个函数.
 --- @param NumLimit number 你要添加action的个数
 function module.addMutiAction(self, NodeID, ActionID, NumLimit)
-	local layer
-	local tree
-	local collideNum = 0
-	local playercomp = (module.getMasterPlayerUtils()).playerGameObj
-	local motion_fsm2 = playercomp:call("getComponent(System.Type)", sdk.typeof("via.motion.MotionFsm2"))
 	local isCollision = false
-	if playercomp ~= nil then
-		if motion_fsm2 ~= nil then
-			layer = motion_fsm2:call("getLayer", 0)
-			if layer ~= nil then
-				tree = layer:get_tree_object()
-				if tree ~= nil then
-					local node = tree:get_node_by_id(NodeID)
-					if node == nil then return end
-					local node_data = node:get_data()
-					local actions = node_data:get_actions()
-					for index = 0, actions:size() - 1 do
-						if tonumber(actions[index]) == ActionID then
-							collideNum = collideNum + 1
-							if collideNum >= NumLimit then
-								isCollision = true
-							end
-						end
-					end
-					if not isCollision then
-						for i = 1, NumLimit - collideNum do
-							actions:push_back(tonumber(ActionID))
-						end
-					end
-				end
+
+	local node = getNodeByNodeID(NodeID)
+	if node == nil then return end
+
+	local node_data = node:get_data()
+	actions = node_data:get_actions()
+	for index, value in ipairs(actions) do
+		if tonumber(value) == ActionID then
+			collideNum = collideNum + 1
+			if collideNum >= NumLimit then
+				isCollision = true
 			end
 		end
+	end
+
+	if isCollision then return end
+	for i = 1, NumLimit - collideNum do
+		actions:push_back(tonumber(ActionID))
 	end
 end
 
 --- 对一个node添加已有Action，但是NodeIndex，偷懒用
 function module.addAction_NodeIndex(self, NodeIndex, ActionID)
-	local layer
-	local tree
-	local playercomp = (module.getMasterPlayerUtils()).playerGameObj
-	local motion_fsm2 = playercomp:call("getComponent(System.Type)", sdk.typeof("via.motion.MotionFsm2"))
 	local isCollision = false
-	if playercomp ~= nil then
-		if motion_fsm2 ~= nil then
-			layer = motion_fsm2:call("getLayer", 0)
-			if layer ~= nil then
-				tree = layer:get_tree_object()
-				if tree ~= nil then
-					local node = tree:get_nodes()[NodeIndex]
-					if node == nil then return end
-					local node_data = node:get_data()
-					local actions = node_data:get_actions()
-					for index, value in ipairs(actions) do
-						if tonumber(value) == ActionID then
-							isCollision = true
-						end
-					end
-					if not isCollision then
-						actions:push_back(tonumber(ActionID))
-					end
-				end
-			end
+
+	local tree = getTreeComponentCore()
+	if tree == nil then return end
+
+	local node = tree:get_nodes()[NodeIndex]
+	if node == nil then return end
+
+	local node_data = node:get_data()
+	local actions = node_data:get_actions()
+	for index, value in ipairs(actions) do
+		if tonumber(value) == ActionID then
+			isCollision = true
 		end
 	end
+
+	if isCollision then return end
+	actions:push_back(tonumber(ActionID))
 end
 
 --- 改变一个已有Condition-state对的Condition
 function module.replaceCondition(self, NodeID, OriginalConditionID, ReplacedConditionID)
-	local layer
-	local tree
-	local playercomp = (module.getMasterPlayerUtils()).playerGameObj
-	local motion_fsm2 = playercomp:call("getComponent(System.Type)", sdk.typeof("via.motion.MotionFsm2"))
 	local isCollision = false
-	if playercomp ~= nil then
-		if motion_fsm2 ~= nil then
-			layer = motion_fsm2:call("getLayer", 0)
-			if layer ~= nil then
-				tree = layer:get_tree_object()
-				if tree == nil then return end
-				local node = tree:get_node_by_id(NodeID)
-				if node == nil then return end
-				local node_data = node:get_data()
-				local transition_array = node_data:get_transition_conditions()
-				for index = 0, transition_array:size() - 1 do
-					if tonumber(transition_array[index]) == ReplacedConditionID then
-						isCollision = true
-					end
-				end
-				if not isCollision then
-					for index = 0, transition_array:size() - 1 do
-						if transition_array[index] == OriginalConditionID then
-							transition_array[index] = tonumber(ReplacedConditionID)
-						end
-					end
-				end
-			end
+
+	local node = getNodeByNodeID(NodeID)
+	if node == nil then return end
+
+	local node_data = node:get_data()
+	local transition_array = node_data:get_transition_conditions()
+	for index = 0, transition_array:size() - 1 do
+		if tonumber(transition_array[index]) == ReplacedConditionID then
+			isCollision = true
+		end
+	end
+
+	if isCollision then return end
+	for index = 0, transition_array:size() - 1 do
+		if transition_array[index] == OriginalConditionID then
+			transition_array[index] = tonumber(ReplacedConditionID)
 		end
 	end
 end
 
 --- 改变一个已有Condition-state对的State
 function module.replaceTransition(self, NodeID, ConditionID, ReplacedStateIndex)
-	local layer
-	local tree
-	local playercomp = (module.getMasterPlayerUtils()).playerGameObj
-	local motion_fsm2 = playercomp:call("getComponent(System.Type)", sdk.typeof("via.motion.MotionFsm2"))
 	local isCollision = false
-	if playercomp ~= nil then
-		if motion_fsm2 ~= nil then
-			-- re.msg("success")
-			layer = motion_fsm2:call("getLayer", 0)
-			if layer ~= nil then
-				tree = layer:get_tree_object()
-				if tree == nil then return end
-				local node = tree:get_node_by_id(NodeID)
-				if node == nil then return end
-				local node_data = node:get_data()
-				local transition_array = node_data:get_transition_conditions()
-				local node_array = node_data:get_states()
+	
+	local node = getNodeByNodeID(NodeID)
+	if node == nil then return end
 
-				for index = 0, node_array:size() - 1 do
-					if tonumber(node_array[index]) == ReplacedStateIndex then
-						if transition_array[index] == ConditionID then
-							isCollision = true
-						end
-					end
-				end
+	local node_data = node:get_data()
+	local transition_array = node_data:get_transition_conditions()
+	local node_array = node_data:get_states()
 
-				if not isCollision then
-					for i = 0, transition_array:size() - 1 do
-						if transition_array[i] == ConditionID then
-							node_array[i] = tonumber(ReplacedStateIndex)
-						end
-					end
-				end
+	for index = 0, node_array:size() - 1 do
+		if tonumber(node_array[index]) == ReplacedStateIndex then
+			if transition_array[index] == ConditionID then
+				isCollision = true
 			end
+		end
+	end
+
+	if isCollision then return end
+	for i = 0, transition_array:size() - 1 do
+		if transition_array[i] == ConditionID then
+			node_array[i] = tonumber(ReplacedStateIndex)
 		end
 	end
 end
@@ -888,23 +841,10 @@ end
 --- 增加一个Condition-State对，如果已经有相同的Condition，则不会添加，如果想变更一个已有Condition的State（比如大剑本来派生铁山靠换成派生真蓄），请使用replaceTransition函数
 --- (如果你需要使用AddEvent来魔改这个派生的event，whetherAddDefaultEvent这项需要为true)
 function module.addConditionPairs(self, NodeID, ConditionID, transitionStateIndex, whetherAddDefaultEvent)
-	local layer
-	local tree
-	local playercomp = (module.getMasterPlayerUtils()).playerGameObj
-	local motion_fsm2 = playercomp:call("getComponent(System.Type)", sdk.typeof("via.motion.MotionFsm2"))
 	local isCollision = false
 
-	if playercomp == nil then return end
-	if motion_fsm2 == nil then return end
-
-	layer = motion_fsm2:call("getLayer", 0)
-	if layer == nil then return end
-
-	tree = layer:get_tree_object()
+	local tree = getTreeComponentCore()
 	if tree == nil then return end
-
-	local condition = tree:get_condition(ConditionID)
-	if condition == nil then return end
 
 	local node = tree:get_node_by_id(NodeID)
 	if node == nil then return end
@@ -998,68 +938,70 @@ end
 
 --- 为一个特定的Node下特定的Condition添加指定的EventIndex
 function module.addTransitionEvent(self, NodeID, ConditionID, EventIndex)
-	local treeObj = getTreeComponentCore()
-	local node_data = treeObj:get_node_by_id(NodeID):get_data()
+	local node = getNodeByNodeID(NodeID)
+	if node == nil then return end
+	
+	local node_data = node:get_data()
 	local Conditions = node_data:get_transition_conditions()
 	local TransitionEvents = node_data:get_transition_events()
-	local matched = false
+	
 	if Conditions == nil then
 		return
 	end
-	local matchedConditionIndex
+
+	local matchedConditionIndex = -1
 	for index = 0, Conditions:get_size() do
 		if tonumber(Conditions[index]) == ConditionID then
 			matchedConditionIndex = index
-			matched = true
 		end
 	end
-	if matched then
-		local Target = TransitionEvents[matchedConditionIndex]
-		if not (Target == nil) then
-			if Target:get_size() == 0 then
-				Target:push_back(tonumber(EventIndex))
-			else
-				local isCollision = false
-				for i = 0, Target:get_size() - 1 do
-					if tonumber(Target[i]) == EventIndex then
-						isCollision = true
-					end
-				end
-				if isCollision == false then
-					Target:push_back(tonumber(EventIndex))
-				end
+
+	if matchedConditionIndex == -1 then return end
+
+	local Target = TransitionEvents[matchedConditionIndex]
+	if Target == nil then return end
+	if Target:get_size() == 0 then
+		Target:push_back(tonumber(EventIndex))
+	else
+		local isCollision = false
+		for i = 0, Target:get_size() - 1 do
+			if tonumber(Target[i]) == EventIndex then
+				isCollision = true
 			end
+		end
+		if isCollision == false then
+			Target:push_back(tonumber(EventIndex))
 		end
 	end
 end
 
 --- 删除一个特定的Node下特定的Condition的指定的EventIndex，如果该condition没有Event则不会操作，如果有多个event只会删除特定的那个
 function module.eraseTransitionEvent(self, NodeID, ConditionID, EventIndex)
-	local treeObj = getTreeComponentCore()
-	local node_data = treeObj:get_node_by_id(NodeID):get_data()
+	local node = getNodeByNodeID(NodeID)
+	if node == nil then return end
+	
+	local node_data = node:get_data()
 	local Conditions = node_data:get_transition_conditions()
 	local TransitionEvents = node_data:get_transition_events()
-	local matched = false
+
 	if Conditions == nil then
 		return
 	end
-	local matchedConditionIndex
+	
+	local matchedConditionIndex = -1
 	for i = 0, Conditions:size() - 1 do
 		if tonumber(Conditions[i]) == ConditionID then
 			matchedConditionIndex = i
-			matched = true
 		end
 	end
-	if matched then
-		local Target = TransitionEvents[matchedConditionIndex]
-		if not (Target:size() == 0) then
-			for i = 0, Target:size() - 1 do
-				if tonumber(Target[i]) == EventIndex then
-					Target:erase(i)
-				end
-			end
-		else
 
+	if matchedConditionIndex == -1 then return end
+
+	local Target = TransitionEvents[matchedConditionIndex]
+	if not Target:size() then return end
+	for i = 0, Target:size() - 1 do
+		if tonumber(Target[i]) == EventIndex then
+			Target:erase(i)
 		end
 	end
 end
@@ -1226,40 +1168,34 @@ function module.duplicateRegister(self, Type, idTbl, modName, weapontype)
 	local arrayLength = 0
 	initDupicateConfig(modName, weapontype, Type)
 	local prefLen = 0
-	local MasterPlayer = module.getMasterPlayerUtils().masterPlayer
-	if MasterPlayer == nil then
-		return nil
+
+	if not (module.checkInMainField()) then return end
+	if Type == "Action" then
+		array = Tree:get_actions()
+		innerValidCheck(array, modName, weapontype, Type, function()
+			for index, value in ipairs(idTbl) do
+				table.insert(TblUsedToReturn, duplicate_global_action(getTreeComponentCore(), value))
+			end
+		end, idTbl, TblUsedToReturn)
+	elseif Type == "Event" then
+		array = Tree:get_transitions()
+		innerValidCheck(array, modName, weapontype, Type, function()
+			for index, value in ipairs(idTbl) do
+				table.insert(TblUsedToReturn, duplicate_global_transition_event(self, getTreeComponentCore(), value))
+			end
+		end, idTbl, TblUsedToReturn)
+	elseif Type == "Condition" then
+		array = Tree:get_conditions()
+		innerValidCheck(array, modName, weapontype, Type, function()
+			for index, value in ipairs(idTbl) do
+				table.insert(TblUsedToReturn, duplicate_global_condition(getTreeComponentCore(), value))
+			end
+		end, idTbl, TblUsedToReturn)
 	end
-	local IsFieldMainOutZone = MasterPlayer:call("get_IsFieldMainOutZone")
-	local IsFieldMainZone = MasterPlayer:call("get_IsFieldMainZone")
-	if IsFieldMainOutZone or IsFieldMainZone then
-		if Type == "Action" then
-			array = Tree:get_actions()
-			innerValidCheck(array, modName, weapontype, Type, function()
-				for index, value in ipairs(idTbl) do
-					table.insert(TblUsedToReturn, duplicate_global_action(getTreeComponentCore(), value))
-				end
-			end, idTbl, TblUsedToReturn)
-		elseif Type == "Event" then
-			array = Tree:get_transitions()
-			innerValidCheck(array, modName, weapontype, Type, function()
-				for index, value in ipairs(idTbl) do
-					table.insert(TblUsedToReturn, duplicate_global_transition_event(self, getTreeComponentCore(), value))
-				end
-			end, idTbl, TblUsedToReturn)
-		elseif Type == "Condition" then
-			array = Tree:get_conditions()
-			innerValidCheck(array, modName, weapontype, Type, function()
-				for index, value in ipairs(idTbl) do
-					table.insert(TblUsedToReturn, duplicate_global_condition(getTreeComponentCore(), value))
-				end
-			end, idTbl, TblUsedToReturn)
-		end
-		if #TblUsedToReturn == 0 then
-			TblUsedToReturn = duplicatePref[tostring(weapontype)][tostring(Type)]['AddObj']
-		end
-		return TblUsedToReturn
+	if #TblUsedToReturn == 0 then
+		TblUsedToReturn = duplicatePref[tostring(weapontype)][tostring(Type)]['AddObj']
 	end
+	return TblUsedToReturn
 end
 
 ---用于复原由duplicate函数产生的配置文件，这个函数只需要写在mod中（不需要在on_frame内部）即可生效，在游戏结束时自动初始化配置文件
@@ -1277,19 +1213,6 @@ function module.onTerminateVM(self, modName)
 		function()
 			json.dump_file(modName, { ["off"] = true })
 		end)
-end
-
----用于检测是否在战斗场地（包括训练场）的函数，如果不想在城镇使用函数并且不知道该怎么判断，用这个就对了，返回一个布尔值，直接塞在if的条件里
----@return boolean
-function module.checkInMainField()
-	local playerUtils = module.getMasterPlayerUtils()
-	if playerUtils == nil then
-		return false
-	end
-	local masterPlayer = playerUtils.masterPlayer
-	local IsFieldMainOutZone = masterPlayer:call("get_IsFieldMainOutZone")
-	local IsFieldMainZone = masterPlayer:call("get_IsFieldMainZone")
-	return IsFieldMainOutZone or IsFieldMainZone
 end
 
 ---## 获取玩家坐标
