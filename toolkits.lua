@@ -893,43 +893,45 @@ function module.addConditionPairs(self, NodeID, ConditionID, transitionStateInde
 	local playercomp = (module.getMasterPlayerUtils()).playerGameObj
 	local motion_fsm2 = playercomp:call("getComponent(System.Type)", sdk.typeof("via.motion.MotionFsm2"))
 	local isCollision = false
-	if playercomp ~= nil then
-		if motion_fsm2 ~= nil then
-			layer = motion_fsm2:call("getLayer", 0)
-			if layer ~= nil then
-				tree = layer:get_tree_object()
-				if tree == nil then return end
-				local condition = tree:get_condition(ConditionID)
-				if tree ~= nil then
-					local node = tree:get_node_by_id(NodeID)
-					if node == nil then return end
-					local node_data = node:get_data()
-					local transition_array = node_data:get_transition_conditions()
-					-- local tansitionAll = node:get_transition_events()
-					-- for index, value in ipairs(transition_array:get_elements()) do
-					-- 	if tonumber(value) == ConditionID then
-					-- 		isCollision = true
-					-- 	end
-					-- end
-					for i = 0, transition_array:get_size() do
-						if tonumber(transition_array[i]) == ConditionID then
-							isCollision = true
-						end
-					end
-					if not isCollision then
-						local events = node_data:get_transition_events()
-						transition_array:push_back(tonumber(ConditionID))
-						node_data:get_states():push_back(tonumber(transitionStateIndex))
-						if whetherAddDefaultEvent == true then
-							local tmpNode = tree:get_nodes()[1]
-							local tmpEvent = tmpNode:get_data():get_transition_events()
-							events:push_back(tmpEvent[0])
-						end
-					end
-				end
-			end
+
+	if playercomp == nil then return end
+	if motion_fsm2 == nil then return end
+
+	layer = motion_fsm2:call("getLayer", 0)
+	if layer == nil then return end
+
+	tree = layer:get_tree_object()
+	if tree == nil then return end
+
+	local condition = tree:get_condition(ConditionID)
+	if condition == nil then return end
+
+	local node = tree:get_node_by_id(NodeID)
+	if node == nil then return end
+	
+	local node_data = node:get_data()
+	local transition_array = node_data:get_transition_conditions()
+	-- local tansitionAll = node:get_transition_events()
+	-- for index, value in ipairs(transition_array:get_elements()) do
+	-- 	if tonumber(value) == ConditionID then
+	-- 		isCollision = true
+	-- 	end
+	-- end
+	for i = 0, transition_array:get_size() - 1 do
+		if tonumber(transition_array[i]) == ConditionID then
+			isCollision = true
 		end
 	end
+	if isCollision then return end
+	
+	transition_array:push_back(tonumber(ConditionID))
+	node_data:get_states():push_back(tonumber(transitionStateIndex))
+
+	if not whetherAddDefaultEvent then return end
+	local events = node_data:get_transition_events()
+	local tmpNode = tree:get_nodes()[1]
+	local tmpEvent = tmpNode:get_data():get_transition_events()
+	events:push_back(tmpEvent[0])
 end
 
 --- 对一个action的Field进行改变
