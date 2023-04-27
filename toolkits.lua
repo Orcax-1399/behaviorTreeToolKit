@@ -705,8 +705,8 @@ function module.addAction(self, NodeID, ActionID)
 
 	local node_data = node:get_data()
 	actions = node_data:get_actions()
-	for index, value in ipairs(actions) do
-		if tonumber(value) == ActionID then
+	for index = 0, actions:size() - 1 do
+		if tonumber(actions[index]) == ActionID then
 			isCollision = true
 		end
 	end
@@ -751,8 +751,8 @@ function module.addMutiAction(self, NodeID, ActionID, NumLimit)
 
 	local node_data = node:get_data()
 	actions = node_data:get_actions()
-	for index, value in ipairs(actions) do
-		if tonumber(value) == ActionID then
+	for index = 0, actions:size() - 1 do
+		if tonumber(actions[index]) == ActionID then
 			collideNum = collideNum + 1
 			if collideNum >= NumLimit then
 				isCollision = true
@@ -778,8 +778,8 @@ function module.addAction_NodeIndex(self, NodeIndex, ActionID)
 
 	local node_data = node:get_data()
 	local actions = node_data:get_actions()
-	for index, value in ipairs(actions) do
-		if tonumber(value) == ActionID then
+	for index = 0, actions:size() - 1 do
+		if tonumber(actions[index]) == ActionID then
 			isCollision = true
 		end
 	end
