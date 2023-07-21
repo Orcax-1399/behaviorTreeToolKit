@@ -1134,8 +1134,8 @@ function module.getAllConditions_SpecificState(self, stateIndex)
 				table.insert(tbl, conditionObj)
 			end
 		end
-		return tbl
 	end
+    return tbl
 end
 
 --- 为一个节点组批量替换它的派生
