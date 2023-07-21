@@ -1126,16 +1126,15 @@ function module.getAllConditions_SpecificState(self, stateIndex)
 		local node_data = nodes[i]:get_data()
 		local states = node_data:get_states()
 		local conditions = node_data:get_transition_conditions()
-		local nodeObj = nodes[i]
-		for i = 0, states:size() - 1 do
-			if tonumber(states[i]) == stateIndex then
-				local conditionIndex = tonumber(conditions[i])
-				local conditionObj = module.getConditionObj(conditionIndex)
+		for j = 0, states:size() - 1 do
+			if tonumber(states[j]) == stateIndex then
+				local conditionIndex = tonumber(conditions[j])
+				local conditionObj = module:getConditionObj(conditionIndex)
 				table.insert(tbl, conditionObj)
 			end
 		end
-		return tbl
 	end
+    return tbl
 end
 
 --- 为一个节点组批量替换它的派生
