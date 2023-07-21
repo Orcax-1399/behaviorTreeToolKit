@@ -1127,9 +1127,9 @@ function module.getAllConditions_SpecificState(self, stateIndex)
 		local states = node_data:get_states()
 		local conditions = node_data:get_transition_conditions()
 		local nodeObj = nodes[i]
-		for i = 0, states:size() - 1 do
-			if tonumber(states[i]) == stateIndex then
-				local conditionIndex = tonumber(conditions[i])
+		for j = 0, states:size() - 1 do
+			if tonumber(states[j]) == stateIndex then
+				local conditionIndex = tonumber(conditions[j])
 				local conditionObj = module:getConditionObj(conditionIndex)
 				table.insert(tbl, conditionObj)
 			end
