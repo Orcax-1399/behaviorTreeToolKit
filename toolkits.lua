@@ -1130,7 +1130,7 @@ function module.getAllConditions_SpecificState(self, stateIndex)
 		for i = 0, states:size() - 1 do
 			if tonumber(states[i]) == stateIndex then
 				local conditionIndex = tonumber(conditions[i])
-				local conditionObj = module.getConditionObj(conditionIndex)
+				local conditionObj = module:getConditionObj(conditionIndex)
 				table.insert(tbl, conditionObj)
 			end
 		end
